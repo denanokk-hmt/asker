@@ -1,0 +1,85 @@
+steps:
+# This step builds the container image.
+- name: 'gcr.io/cloud-builders/docker'
+  id: Build
+  args:
+  - 'build'
+  - '--no-cache'
+  - '--build-arg'
+  - 'COMMITID=$SHORT_SHA'
+  - '--build-arg'
+  - 'SHA_COMMIT_ID=$SHORT_SHA'
+  - '-t'
+  - 'gcr.io/$PROJECT_ID/hmt/asker/dev/svc:$SHORT_SHA'
+  - '.'
+
+# This step pushes the image to Container Registry
+- name: 'gcr.io/cloud-builders/docker'
+  id: Push
+  args:
+  - 'push'
+  - 'gcr.io/$PROJECT_ID/hmt/asker/dev/svc:$SHORT_SHA'
+
+#Docker Tester
+- name: 'gcr.io/cloud-builders/gcloud'
+  id: Cloud-Run
+  args:
+  - 'beta'
+  - 'run'
+  - 'deploy'
+  - 'docker-tester-asker'
+  - '--image'
+  - 'gcr.io/$PROJECT_ID/hmt/asker/dev/svc:$SHORT_SHA'
+  - '--allow-unauthenticated'
+  - '--region=asia-northeast1'
+  - '--platform=managed'
+
+#CI Tester
+- name: 'gcr.io/cloud-builders/curl'
+  id: Curl-Test
+  args:
+  - 'https://docker-tester-asker.svc.app'
+
+# This step deploy the image to k8s cluster
+- name: 'gcr.io/cloud-builders/kubectl'
+  id: Deploy
+  args:
+  - 'set'
+  - 'image'
+  - 'deploy/svc-hmt-asker'
+  - 'svc-hmt-asker=gcr.io/$PROJECT_ID/hmt/asker/dev/svc:$SHORT_SHA'
+  - '-n'
+  - 'svc'
+  env:
+  - 'CLOUDSDK_COMPUTE_ZONE=asia-east1-a'
+  - 'CLOUDSDK_CONTAINER_CLUSTER=k8s-cluster-hmt-dev'
+
+# This step rollout status check on k8s cluster
+- name: 'gcr.io/cloud-builders/kubectl'
+  id: Rollout
+  args:
+  - 'rollout'
+  - 'status'
+  - 'deploy/svc-hmt-asker'
+  - '-n'
+  - 'svc'
+  env:
+  - 'CLOUDSDK_COMPUTE_ZONE=asia-east1-a'
+  - 'CLOUDSDK_CONTAINER_CLUSTER=k8s-cluster-hmt-dev'
+
+##Cloud Run Deploy
+#- name: 'gcr.io/cloud-builders/gcloud'
+#  id: Cloud-Run-Deploy
+#  args:
+#  - 'beta'
+#  - 'run'
+#  - 'deploy'
+#  - 'svc-hmt-asker-anonymous-cloudrun'
+#  - '--image'
+#  - 'gcr.io/$PROJECT_ID/hmt/asker/dev/svc:$SHORT_SHA'
+#  - '--allow-unauthenticated'
+#  - '--region=asia-northeast1'
+#  - '--platform=managed'
+
+#TAG
+tags : [ 'asker', 'dev', 'svc' ]

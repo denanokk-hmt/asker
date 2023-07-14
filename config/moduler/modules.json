@@ -1,0 +1,10 @@
+{
+  "modules": {
+    "http": "/common/http/axios",
+    "crypto": "/common/crypto/crypto",
+    "kvs": "/common/kvs/datastore/config_asker",
+    "getIP": "/common/get_ip.js",
+    "server_token_creator": "/common/server_token_creator",
+    "validation": "/common/validation"
+  }
+}
